@@ -4,23 +4,43 @@ void main() {
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool isDarkMode = false;
+
+  void toggleDarkMode() {
+    setState(() {
+      isDarkMode = !isDarkMode;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
+      theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      home: HomeScreen(toggleDarkMode: toggleDarkMode, isDarkMode: isDarkMode),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
+  final Function toggleDarkMode;
+  final bool isDarkMode;
+  
+  HomeScreen({required this.toggleDarkMode, required this.isDarkMode});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  int _notificationCount = 3;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final List<Widget> _pages = [
@@ -28,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Center(child: Text("🔍 Search Page", style: TextStyle(fontSize: 20))),
     Center(child: Text("❤️ Favorites Page", style: TextStyle(fontSize: 20))),
     Center(child: Text("🏢 Business Page", style: TextStyle(fontSize: 20))),
-    Center(child: Text("👤 Profile Page", style: TextStyle(fontSize: 20))),
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -40,99 +60,84 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey, // Attach the key to Scaffold
-
+      key: _scaffoldKey,
       appBar: AppBar(
-        title: Text("My App"),
+        title: Text("BizStore"),
         backgroundColor: Colors.blue,
         leading: IconButton(
           icon: Icon(Icons.menu),
-          onPressed: () {
-            _scaffoldKey.currentState?.openDrawer(); // ✅ Correct way to open Drawer
-          },
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => NotificationScreen()),
-              );
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.notifications),
+                onPressed: () {
+                  setState(() => _notificationCount = 0);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => NotificationScreen()),
+                  );
+                },
+              ),
+              if (_notificationCount > 0)
+                Positioned(
+                  right: 11,
+                  top: 11,
+                  child: CircleAvatar(
+                    radius: 8,
+                    backgroundColor: Colors.red,
+                    child: Text(
+                      '$_notificationCount',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
-
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
+            UserAccountsDrawerHeader(
+              accountName: Text("Lokesh"),
+              accountEmail: Text("lokesh@example.com"),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Text("L", style: TextStyle(fontSize: 24, color: Colors.blue)),
+              ),
               decoration: BoxDecoration(color: Colors.blue),
-              child: Text("Menu", style: TextStyle(color: Colors.white, fontSize: 24)),
             ),
             ListTile(
               leading: Icon(Icons.home),
               title: Text("Home"),
-              onTap: () {
-                setState(() => _selectedIndex = 0);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.search),
-              title: Text("Search"),
-              onTap: () {
-                setState(() => _selectedIndex = 1);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.favorite),
-              title: Text("Favorites"),
-              onTap: () {
-                setState(() => _selectedIndex = 2);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.business),
-              title: Text("Business"),
-              onTap: () {
-                setState(() => _selectedIndex = 3);
-                Navigator.pop(context);
-              },
+              onTap: () => _onItemTapped(0),
             ),
             ListTile(
               leading: Icon(Icons.person),
               title: Text("Profile"),
-              onTap: () {
-                setState(() => _selectedIndex = 4);
-                Navigator.pop(context);
-              },
+              onTap: () => _onItemTapped(4),
             ),
-            Divider(),
             ListTile(
               leading: Icon(Icons.settings),
               title: Text("Settings"),
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () {},
             ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text("Logout"),
-              onTap: () {
-                Navigator.pop(context);
-              },
+            SwitchListTile(
+              title: Text("Dark Mode"),
+              value: widget.isDarkMode,
+              onChanged: (value) => widget.toggleDarkMode(),
             ),
           ],
         ),
       ),
-
-      body: _pages[_selectedIndex],
-
+      body: AnimatedSwitcher(
+        duration: Duration(milliseconds: 300),
+        child: _pages[_selectedIndex],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
@@ -151,17 +156,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class ProfileScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
+          SizedBox(height: 10),
+          Text("Lokesh", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Text("Software Developer"),
+        ],
+      ),
+    );
+  }
+}
+
 class NotificationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Notifications"),
-        backgroundColor: Colors.blue,
-      ),
-      body: Center(
-        child: Text("No new notifications"),
-      ),
+      appBar: AppBar(title: Text("Notifications"), backgroundColor: Colors.blue),
+      body: Center(child: Text("No new notifications")),
     );
   }
 }
